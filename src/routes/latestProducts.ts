@@ -45,8 +45,6 @@ router.post('/products', [authenticate, checkCache], async (req: Request, res: R
   }
 
   try {
-    //console.log(`Fetching products with page: ${page}, limit: ${limit}, sortField: ${sortField}, sortDirection: ${sortDirection}`);
-
     const requestBody = {
       "limit": Number(limit),
       "page": Number(page),
@@ -73,8 +71,6 @@ router.post('/products', [authenticate, checkCache], async (req: Request, res: R
       "total-count-mode": "exact"
     };
 
-    //console.log('Request body to Shopware API:', JSON.stringify(requestBody, null, 2));
-
     const response = await axios.post(`${SHOPWARE_API_URL}/search/product`, requestBody, {
       "headers": {
         'Accept': 'application/vnd.api+json, application/json',
@@ -85,7 +81,6 @@ router.post('/products', [authenticate, checkCache], async (req: Request, res: R
 
     const products = response.data.data;
     const totalProducts = response.data.meta.total;
-    //console.log(`Fetched ${products.length} products, total products: ${totalProducts}`);
 
     // Cache speichern
     await redisClient.set(cacheKey, JSON.stringify({ products, totalProducts }));
@@ -102,7 +97,6 @@ router.post('/products', [authenticate, checkCache], async (req: Request, res: R
   }
 });
 
-
 // Endpunkt für das Abrufen eines einzelnen Produkts
 router.get('/products/:id', authenticate, async (req: Request, res: Response) => {
   const { id } = req.params;
@@ -117,11 +111,9 @@ router.get('/products/:id', authenticate, async (req: Request, res: Response) =>
     });
 
     const product = response.data;
-    console.log('Product fetched from API:', product); // Loggen des von der API abgerufenen Produkts
 
     // Cache speichern
     await redisClient.set(`product:${id}`, JSON.stringify(product));
-    console.log('Product cached'); // Loggen, dass das Produkt zwischengespeichert wurde
 
     res.json(product);
   } catch (error) {
@@ -131,6 +123,73 @@ router.get('/products/:id', authenticate, async (req: Request, res: Response) =>
       res.status(500).send(error.response?.data || error.message);
     } else {
       res.status(500).send('An unknown error occurred');
+    }
+  }
+});
+
+// Endpunkt für das Abrufen verwandter Produkte
+router.post('/relatedproducts', [authenticate, checkCache], async (req: Request, res: Response) => {
+  const { productName } = req.body;
+
+  if (!productName) {
+    return res.status(400).send('Product name is required');
+  }
+
+  try {
+    const requestBody = {
+      "filter": [
+        {
+          type: 'or',
+          operator: 'or',
+          queries: [
+            {
+              type: 'contains',
+              field: 'name',
+              value: productName
+            },
+            {
+              type: 'contains',
+              field: 'name',
+              value: productName.split(',')[0]
+            }
+          ]
+        }
+      ]
+    };
+
+    const response = await axios.post(`${SHOPWARE_API_URL}/search/product`, requestBody, {
+      "headers": {
+        'Accept': 'application/vnd.api+json, application/json',
+        'Content-Type': 'application/json',
+        'Authorization': req.headers['Authorization']!
+      }
+    });
+    //console.log('Full response:', response.data.data);
+
+    const relatedProducts = response.data.data.map((item: any) => ({
+      id: item.id,
+      name: item.attributes.name,
+      productNumber: item.attributes.productNumber,
+      active: item.attributes.active,
+      description: item.attributes.description,
+      customSearchKeywords: item.attributes.customSearchKeywords,
+      ean: item.attributes.ean,
+      metaDescription: item.attributes.metaDescription,
+      metaTitle: item.attributes.metaTitle,
+      keywords: item.attributes.keywords,
+      categoryIds: item.attributes.categoryIds,
+      shortText: item.attributes.shortText
+    }));
+
+    //console.log(relatedProducts);
+    res.json({ relatedProducts });
+  } catch (error) {
+    console.error('Error fetching related products:', error);
+    if (axios.isAxiosError(error)) {
+      console.error('Axios error response:', error.response?.data);
+      return res.status(500).send(error.response?.data || error.message);
+    } else {
+      return res.status(500).send('An unknown error occurred');
     }
   }
 });
