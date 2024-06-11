@@ -137,24 +137,18 @@ router.post('/relatedproducts', [authenticate, checkCache], async (req: Request,
 
   try {
     const requestBody = {
-      "filter": [
-        {
-          type: 'or',
-          operator: 'or',
-          queries: [
-            {
-              type: 'contains',
-              field: 'name',
-              value: productName
-            },
-            {
-              type: 'contains',
-              field: 'name',
-              value: productName.split(',')[0]
-            }
-          ]
-        }
-      ]
+      filter: [
+      {
+        type: 'contains',
+        field: 'name',
+        value: productName.split(',')[0]
+      },
+      {
+        type: 'equals',
+        field: 'parentId',
+        value: null
+      }
+    ]
     };
 
     const response = await axios.post(`${SHOPWARE_API_URL}/search/product`, requestBody, {
