@@ -209,7 +209,8 @@ router.post('/update-products', [authenticate, checkCache], async (req: Request,
         ...options,
         method: 'PATCH',
       });
-      console.log(data);
+      //console.log(data);
+      res.status(200).json({ success: true, data });
     } catch (error) {
       console.error(error);
     }
