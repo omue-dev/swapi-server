@@ -158,7 +158,7 @@ router.post('/relatedproducts', [authenticate, checkCache], async (req: Request,
         'Authorization': req.headers['Authorization']!
       }
     });
-    //console.log('Full response:', response.data.data);
+    //console.log('Full response:', req.headers);
 
     const relatedProducts = response.data.data.map((item: any) => ({
       id: item.id,
@@ -172,7 +172,7 @@ router.post('/relatedproducts', [authenticate, checkCache], async (req: Request,
       metaTitle: item.attributes.metaTitle,
       keywords: item.attributes.keywords,
       categoryIds: item.attributes.categoryIds,
-      shortText: item.attributes.shortText
+      shortText: item.attributes.customFields.custom_add_product_attributes_short_text
     }));
 
     //console.log(relatedProducts);
@@ -186,6 +186,33 @@ router.post('/relatedproducts', [authenticate, checkCache], async (req: Request,
       return res.status(500).send('An unknown error occurred');
     }
   }
+});
+
+//Endpunkt zum Aktualisieren von Produkten
+router.post('/update-products', [authenticate, checkCache], async (req: Request, res: Response) => {
+    const formData = req.body;
+    console.log(formData);
+    const id = formData.id;
+    const options = {
+      method: 'PATCH',
+      url: `${SHOPWARE_API_URL}/product/${id}`,
+      "headers": {
+        'Accept': 'application/vnd.api+json, application/json',
+        'Content-Type': 'application/json',
+        'Authorization': req.headers['Authorization']!
+      },
+      data: formData
+    };
+
+    try {
+      const { data } = await axios.request({
+        ...options,
+        method: 'PATCH',
+      });
+      console.log(data);
+    } catch (error) {
+      console.error(error);
+    }
 });
 
 export default router;
