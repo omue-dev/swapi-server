@@ -190,30 +190,123 @@ router.post('/relatedproducts', [authenticate, checkCache], async (req: Request,
 
 //Endpunkt zum Aktualisieren von Produkten
 router.post('/update-products', [authenticate, checkCache], async (req: Request, res: Response) => {
-    const formData = req.body;
-    console.log(formData);
-    const id = formData.id;
-    const options = {
-      method: 'PATCH',
-      url: `${SHOPWARE_API_URL}/product/${id}`,
-      "headers": {
-        'Accept': 'application/vnd.api+json, application/json',
-        'Content-Type': 'application/json',
-        'Authorization': req.headers['Authorization']!
-      },
-      data: formData
-    };
+  const formData = req.body;
+  console.log('Received formData:', formData);
 
-    try {
-      const { data } = await axios.request({
-        ...options,
-        method: 'PATCH',
+  const id = formData.id;
+
+  // Ensure the authorization header is correctly extracted from the request headers
+  const authorizationHeader = req.headers['Authorization']!;
+  if (!authorizationHeader) {
+    return res.status(401).json({
+      success: false,
+      message: 'Authorization header is missing'
+    });
+  }
+
+  // Prepare the payload with the correct structure
+  const payload = {
+    id: formData.id,
+    description: formData.description,
+    metaDescription: formData.metaDescription,
+    metaTitle: formData.metaTitle,
+    keywords: formData.keywords,
+    categories: formData.categoryIds.map((id: string) => ({ id })),
+    customFields: formData.customFields
+  };
+
+  const options = {
+    method: 'PATCH',
+    url: `${SHOPWARE_API_URL}/product/${id}`,
+    headers: {
+      'Accept': 'application/vnd.api+json, application/json',
+      'Content-Type': 'application/json',
+      'Authorization': authorizationHeader
+    },
+    data: payload
+  };
+
+  try {
+    const { data } = await axios.request({
+      ...options,
+      method: 'PATCH',
+    });
+    console.log('Product update response:', data);
+    res.status(200).json({ success: true, data });
+  } catch (error: any) {
+    console.error('Error during product update:', error);
+
+    // Extract detailed error information
+    if (axios.isAxiosError(error)) {
+      const errorResponse = error.response;
+      res.status(errorResponse?.status || 500).json({
+        success: false,
+        message: error.message,
+        error: errorResponse?.data || 'Unknown error occurred'
       });
-      //console.log(data);
-      res.status(200).json({ success: true, data });
-    } catch (error) {
-      console.error(error);
+    } else {
+      res.status(500).json({
+        success: false,
+        message: 'An unexpected error occurred'
+      });
     }
+  }
 });
+
+// Endpoint to fetch categories with products that are active
+router.post('/categories', [authenticate, checkCache], async (req: Request, res: Response) => {
+  const options = {
+    method: 'GET',
+    url: `${SHOPWARE_API_URL}/category`,
+    headers: {
+      'Accept': 'application/vnd.api+json, application/json',
+      'Authorization': req.headers['Authorization']!,
+    },
+    data: {
+      "filter": [
+        {
+          "type": "multi",
+          "operator": "AND",
+          "queries": [
+            {
+              "type": "range",
+              "field": "productCount",
+              "parameters": {
+                "gt": 0
+              }
+            },
+            {
+              "type": "equals",
+              "field": "active",
+              "value": true
+            }
+          ]
+        }
+      ],
+      "sort": [
+        {
+          "field": "name",
+          "order": "ASC"
+        }
+      ]
+    }
+  };
+
+  try {
+    const response = await axios.request({
+      ...options,
+      method: 'GET',
+    });
+    const categories = response.data.data.map((category: any) => ({
+      id: category.id,
+      name: category.attributes.name
+    }));
+    res.status(200).json(categories);
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res.status(500).json({ message: 'Failed to fetch categories', error });
+  }
+});
+
 
 export default router;
