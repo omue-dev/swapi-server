@@ -6,7 +6,6 @@ const router = Router();
 const SHOPWARE_API_URL = 'https://www.weltenbummler-erkelenz.de/api';
 
 router.post('/search/product-manufacturer', authenticate, async (req: Request, res: Response) => {
-  //console.log("/search/product-manufacturer"); // Log-Ausgabe zum Überprüfen des Aufrufs
   try {
     const response = await axios.post(`${SHOPWARE_API_URL}/search/product-manufacturer`, {
       limit: 5000,

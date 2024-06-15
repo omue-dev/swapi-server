@@ -37,7 +37,6 @@ const checkCache = async (req: Request, res: Response, next: () => void) => {
 
 // Endpunkt für das Abrufen der Artikel
 router.post('/products', [authenticate, checkCache], async (req: Request, res: Response) => {
-  //console.log("/products");
   const { page = 1, limit = 10, sortField = 'updatedAt', sortDirection = 'desc' } = req.body;
   const cacheKey = `products:${page}:${limit}:${sortField}:${sortDirection}`;
 
@@ -88,7 +87,7 @@ router.post('/products', [authenticate, checkCache], async (req: Request, res: R
     // Cache speichern
     await redisClient.set(cacheKey, JSON.stringify({ products, totalProducts }));
 
-    res.status(200).json({sucess: true, log: "successfully fetched initial product data from endpoint /products", products, totalProducts });
+    res.json({ products, totalProducts });
   } catch (error) {
     console.error('Error fetching products:', error);
     if (axios.isAxiosError(error)) {
@@ -209,7 +208,7 @@ router.post('/relatedproducts', [authenticate, checkCache], async (req: Request,
 //Endpunkt zum Aktualisieren von Produkten
 router.post('/update-products', [authenticate, checkCache], async (req: Request, res: Response) => {
   const formData = req.body;
-  //console.log('Received formData:', formData);
+  console.log('Received formData:', formData);
 
   const id = formData.id;
 
@@ -350,6 +349,27 @@ router.post('/categories', [authenticate, checkCache], async (req: Request, res:
   } catch (error) {
     console.error('Error fetching categories:', error);
     res.status(500).json({ message: 'Failed to fetch categories', error });
+  }
+});
+
+// Endpunkt zum Generieren von SEO-Daten mithilfe von ChatGPT
+router.post('/aiData', authenticate, async (req: Request, res: Response) => {
+  const { productName } = req.body;
+
+  if (!productName) {
+    return res.status(400).send('Product name is required');
+  }
+
+  try {
+    // API-Aufruf an ChatGPT (angenommen, dass ChatGPT in einem lokalen Dienst oder einem anderen Dienst integriert ist)
+    const response = await axios.post('http://localhost:5000/generate-seo-data', { productName });
+
+    const { shortDescription, description, seoTitle, seoDescription, keywords } = response.data;
+
+    res.json({ shortDescription, description, seoTitle, seoDescription, keywords });
+  } catch (error) {
+    console.error('Error generating SEO data:', error);
+    res.status(500).send('An error occurred while generating SEO data');
   }
 });
 
