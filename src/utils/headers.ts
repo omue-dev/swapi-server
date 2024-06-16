@@ -1,7 +1,7 @@
 import { Request } from 'express';
 
 export const getHeaders = (req: Request) => {
-  console.log("Incoming headers:", req.headers); // Debugging-Ausgabe
+  //console.log("Incoming headers:", req.headers); // Debugging-Ausgabe
   const headers = {
     'Accept': 'application/vnd.api+json, application/json',
     'Content-Type': 'application/json',

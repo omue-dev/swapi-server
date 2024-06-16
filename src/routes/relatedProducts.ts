@@ -1,20 +1,21 @@
+import dotenv from 'dotenv';
+dotenv.config();
 import { Router, Request, Response } from 'express';
 import axios from 'axios';
 import authenticate from '../middleware/authenticate';
 import { checkCache } from '../utils/cacheMiddleware'; 
 import { handleAxiosFetchError } from '../utils/errorHandler';
 import { getHeaders } from '../utils/headers';
-import dotenv from 'dotenv';
 
-dotenv.config();
 
 const router = Router();
-const SHOPWARE_API_URL = process.env.SHOPWARE_API_URL;
+const SHOPWARE_API_URL = process.env.API_BASE_URL;
 
 // Endpunkt für das Abrufen verwandter Produkte
-router.post('/', [authenticate, checkCache], async (req: Request, res: Response) => {
-    const { productName } = req.body;
-  
+router.post('/', authenticate, checkCache, async (req: Request, res: Response) => {
+  const { productName } = req.body;
+  console.log("productName: " + productName); // Log-Ausgabe zum Überprüfen des Aufrufs
+
     if (!productName) {
       return res.status(400).send('Product name is required');
     }
