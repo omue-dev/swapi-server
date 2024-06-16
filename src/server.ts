@@ -1,11 +1,14 @@
-import express from 'express';
-import path from 'path';
+import dotenv from 'dotenv';
+dotenv.config();
+const SHOPWARE_API_URL = process.env.API_BASE_URL;
+console.log("SHOPWARE_API_URL:", SHOPWARE_API_URL); // Debugging-Ausgabe
+import express, { Request, Response, NextFunction } from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
-import routes from './routes';
+import router from './routes';
 
 const app = express();
-const port = 5000;
+const port = process.env.PORT || 5000;
 
 app.use(bodyParser.json());
 app.use(cors());
@@ -17,18 +20,23 @@ app.use((req, res, next) => {
   next();
 });
 
-// Verwende die Routen
-app.use('/api', routes);
+app.use(express.json());
+app.use('/api', router);  // Basisroute festlegen
 
-// Statische Dateien aus dem dist-Ordner bereitstellen
-app.use(express.static(path.join(__dirname, 'dist')));
-
-// Für alle anderen Routen die index.html zurückgeben
-app.get('*', (req, res) => {
-  if (req.url.startsWith('/api')) {
-    res.status(404).send('API endpoint not found');
+// Fehlerbehandlungs-Middleware
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  console.error('Error:', err);
+  if (err.response) {
+    console.error('Error response data:', err.response.data);
+    console.error('Error response status:', err.response.status);
+    console.error('Error response headers:', err.response.headers);
+    res.status(err.response.status).send(err.response.data);
+  } else if (err.request) {
+    console.error('Error request:', err.request);
+    res.status(500).send('Error in making request');
   } else {
-    res.sendFile(path.join(__dirname, 'dist', 'index.html')); // Korrekte Pfadangabe
+    console.error('General Error message:', err.message);
+    res.status(500).send('An unknown error occurred');
   }
 });
 

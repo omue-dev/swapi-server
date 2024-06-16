@@ -1,14 +1,18 @@
+import dotenv from 'dotenv';
+dotenv.config();
 import { Router, Request, Response } from 'express';
 import axios from 'axios';
 import authenticate from '../middleware/authenticate';
+import { handleAxiosFetchError } from '../utils/errorHandler';
+import { getHeaders } from '../utils/headers';
 
 const router = Router();
-const SHOPWARE_API_URL = 'https://www.weltenbummler-erkelenz.de/api';
+const SHOPWARE_API_URL = process.env.API_BASE_URL;
 
-router.post('/search/product-manufacturer', authenticate, async (req: Request, res: Response) => {
-  //console.log("/search/product-manufacturer"); // Log-Ausgabe zum Überprüfen des Aufrufs
+router.post('/', authenticate, async (req: Request, res: Response) => {
+  console.log("/product-manufacturers"); // Log-Ausgabe zum Überprüfen des Aufrufs
   try {
-    const response = await axios.post(`${SHOPWARE_API_URL}/search/product-manufacturer`, {
+    const requestBody = {
       limit: 5000,
       filter: [
         {
@@ -22,25 +26,17 @@ router.post('/search/product-manufacturer', authenticate, async (req: Request, r
           value: null
         }
       ]
-    }, {
-      headers: {
-        'Accept': 'application/vnd.api+json, application/json',
-        'Content-Type': 'application/json',
-        'Authorization': req.headers['Authorization']!
-      }
+    };
+
+    const response = await axios.post(`${SHOPWARE_API_URL}/search/product-manufacturer`, requestBody, {
+      headers: getHeaders(req)
     });
 
     const manufacturersWithMedia = response.data.data.filter((item: any) => item.attributes.mediaId);
-    //console.log('Manufacturers with Products and Media:', manufacturersWithMedia); // Protokolliere die Hersteller mit Media
 
     res.json({ data: manufacturersWithMedia });
   } catch (error) {
-    console.error('Error fetching manufacturers:', error);
-    if (axios.isAxiosError(error)) {
-      res.status(500).send(error.response?.data || error.message);
-    } else {
-      res.status(500).send('An unknown error occurred');
-    }
+    handleAxiosFetchError(error, res);
   }
 });
 

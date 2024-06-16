@@ -1,6 +1,8 @@
+import dotenv from 'dotenv';
+dotenv.config();
 import axios from 'axios';
 
-const SHOPWARE_API_URL = 'https://www.weltenbummler-erkelenz.de/api';
+const SHOPWARE_API_URL = process.env.API_BASE_URL;
 
 let cachedToken: string | null = null;
 
