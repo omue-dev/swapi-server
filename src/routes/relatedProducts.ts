@@ -14,7 +14,7 @@ const SHOPWARE_API_URL = process.env.API_BASE_URL;
 // Endpunkt für das Abrufen verwandter Produkte
 router.post('/', authenticate, checkCache, async (req: Request, res: Response) => {
   const { productName } = req.body;
-  console.log("productName: " + productName); // Log-Ausgabe zum Überprüfen des Aufrufs
+  //console.log("productName: " + productName); // Log-Ausgabe zum Überprüfen des Aufrufs
 
     if (!productName) {
       return res.status(400).send('Product name is required');

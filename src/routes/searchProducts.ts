@@ -12,7 +12,7 @@ const SHOPWARE_API_URL = process.env.API_BASE_URL;
 
 // Endpunkt für das Abrufen der Artikel
 router.post('/', authenticate, async (req: Request, res: Response) => {
-  console.log("/search-products/"); // Log-Ausgabe zum Überprüfen des Aufrufs
+  //console.log("/search-products/"); // Log-Ausgabe zum Überprüfen des Aufrufs
   const { searchTerm, page = 1, limit = 10, sortField = 'name', sortDirection = 'asc' } = req.body;
 
   if (!isValidSortField(sortField)) {

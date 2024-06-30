@@ -12,7 +12,7 @@ const SHOPWARE_API_URL = process.env.API_BASE_URL;
 
 // Endpoint to fetch categories with products that are active
 router.post('/', [authenticate, checkCache], async (req: Request, res: Response) => {
-  console.log("/categories-with-products"); // Log-Ausgabe zum Überprüfen des Aufrufs
+  //console.log("/categories-with-products"); // Log-Ausgabe zum Überprüfen des Aufrufs
     const options = {
       method: 'GET',
       url: `${SHOPWARE_API_URL}/category`,
