@@ -10,7 +10,7 @@ const router = Router();
 const SHOPWARE_API_URL = process.env.API_BASE_URL;
 
 router.post('/', authenticate, async (req: Request, res: Response) => {
-  console.log("/product-manufacturers"); // Log-Ausgabe zum Überprüfen des Aufrufs
+  //console.log("/product-manufacturers"); // Log-Ausgabe zum Überprüfen des Aufrufs
   try {
     const requestBody = {
       limit: 5000,
