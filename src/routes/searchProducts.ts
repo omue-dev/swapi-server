@@ -28,6 +28,11 @@ router.post('/', authenticate, async (req: Request, res: Response) => {
           "type": "contains",
           "field": "name",
           "value": searchTerm,
+        },
+        {
+          "type": "equals",
+          "field": "parentId",
+          "value": null // Nur Hauptprodukte, keine Varianten
         }
       ],
       "sort": [
