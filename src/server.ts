@@ -1,11 +1,10 @@
 import dotenv from 'dotenv';
 dotenv.config();
-const SHOPWARE_API_URL = process.env.API_BASE_URL;
-console.log("SHOPWARE_API_URL:", SHOPWARE_API_URL); // Debugging-Ausgabe
 import express, { Request, Response, NextFunction } from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import router from './routes';
+import generateOrderCsvRouter from './routes/generate-order-csv';  // Der neue Endpunkt
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -22,6 +21,7 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 app.use('/api', router);  // Basisroute festlegen
+router.use('/generate-order.csv', generateOrderCsvRouter);
 
 // Fehlerbehandlungs-Middleware
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
