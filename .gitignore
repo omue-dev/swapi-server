@@ -2,3 +2,4 @@ node_modules/
 dist
 .env
 Bestellungen.csv
+src/utils/getAuthToken.ts
