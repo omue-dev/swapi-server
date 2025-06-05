@@ -13,7 +13,7 @@ This repository contains a small Express server written in TypeScript. It serves
    git clone <repo-url>
    cd swapi-server
    ```
-2. **Install dependencies**
+2. **Install dependencies** (requires Node.js 22.11.0 or newer)
    ```bash
    npm install
    ```
@@ -23,9 +23,13 @@ This repository contains a small Express server written in TypeScript. It serves
    API_BASE_URL=https://your-shop-domain/api
    PORT=5000
    ```
-4. **Run the server**
+4. **Build the project**
    ```bash
-   npm run dev
+   npm run build
+   ```
+5. **Run the server**
+   ```bash
+   npm start
    ```
 
 The server will start on the configured port and expose the API routes under `/api`.
