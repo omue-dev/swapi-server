@@ -16,8 +16,8 @@ const getAuthToken = async (): Promise<string> => {
       client_id: 'administration',
       grant_type: 'password',
       scopes: 'read',
-      username: 'omueller', // Ersetzen Sie diesen Wert durch Ihren tatsächlichen Benutzername
-      password: '9UC&tj^1nHPef$'  // Ersetzen Sie diesen Wert durch Ihr tatsächliches Passwort
+      username: 'YOUR_API_USERNAME', // Ersetzen Sie diesen Wert durch Ihren tatsächlichen Benutzername
+      password: 'YOUR_API_PASSWORD'  // Ersetzen Sie diesen Wert durch Ihr tatsächliches Passwort
     }, {
         headers: {
           'Content-Type': 'application/json'
