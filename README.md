@@ -21,6 +21,7 @@ This repository contains a small Express server written in TypeScript. It serves
    Create a `.env` file in the project root. Example:
    ```env
    API_BASE_URL=https://your-shop-domain/api
+   REDIS_URL=redis://127.0.0.1:6379
    PORT=5000
    ```
 4. **Build the project**

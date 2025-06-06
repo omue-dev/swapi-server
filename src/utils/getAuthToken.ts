@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 import axios from 'axios';
+import credentials from '../utils/authCredentials';
 
 const SHOPWARE_API_URL = process.env.API_BASE_URL;
 
@@ -16,9 +17,9 @@ const getAuthToken = async (): Promise<string> => {
       client_id: 'administration',
       grant_type: 'password',
       scopes: 'read',
-      username: 'omueller', // Ersetzen Sie diesen Wert durch Ihren tatsächlichen Benutzername
-      password: '9UC&tj^1nHPef$'  // Ersetzen Sie diesen Wert durch Ihr tatsächliches Passwort
-    }, {
+      username: credentials.username, 
+      password: credentials.password  
+      }, {
         headers: {
           'Content-Type': 'application/json'
         }
@@ -27,7 +28,7 @@ const getAuthToken = async (): Promise<string> => {
       cachedToken = response.data.access_token;
       setTimeout(() => {
         cachedToken = null;
-      }, (response.data.expires_in - 60) * 1000); // Erneuern 1 Minute vor Ablauf
+      }, (response.data.expires_in - 60) * 1000);
   
       return cachedToken as string;
     } catch (error) {
