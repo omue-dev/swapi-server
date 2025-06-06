@@ -24,11 +24,22 @@ This repository contains a small Express server written in TypeScript. It serves
    REDIS_URL=redis://127.0.0.1:6379
    PORT=5000
    ```
-4. **Build the project**
+4. **API Credentials**
+   Create a new file `src/utils/authCredentials.ts`:
+   ```env
+   const credentials = {
+     username: 'YOUR-API-USERNAME', 
+    password: 'YOUR-API-PASSWORD'  
+   };
+
+   export default credentials;
+   ```
+
+5. **Build the project**
    ```bash
    npm run build
    ```
-5. **Run the server**
+6. **Run the server**
    ```bash
    npm start
    ```
