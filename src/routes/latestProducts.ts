@@ -6,6 +6,7 @@ import authenticate from '../middleware/authenticate';
 import { isValidSortField } from '../utils/vaildation';
 import { handleAxiosFetchError } from '../utils/errorHandler';
 import { getHeaders } from '../utils/headers';
+import { appendEanAssociations, enhanceProductsWithEan } from '../utils/productEanHelper';
 
 const router = Router();
 const SHOPWARE_API_URL = process.env.API_BASE_URL;
@@ -43,7 +44,7 @@ router.post('/', [authenticate], async (req: Request, res: Response) => {
       });
     }
 
-    const requestBody = {
+    const requestBody = appendEanAssociations({
       "limit": Number(limit),
       "page": Number(page),
       "filter": filters,
@@ -54,7 +55,7 @@ router.post('/', [authenticate], async (req: Request, res: Response) => {
         }
       ],
       "total-count-mode": "exact"
-    };
+    });
 
     //console.log("Request body sent to Shopware API:", JSON.stringify(requestBody, null, 2));
 
@@ -64,10 +65,10 @@ router.post('/', [authenticate], async (req: Request, res: Response) => {
 
     //console.log("Shopware API response:", response.data);
 
-    const products = response.data.data;
+    const { enhancedProducts } = enhanceProductsWithEan(response.data);
     const totalProducts = response.data.meta.total;
 
-    res.status(200).json({success: true, log: "successfully fetched initial product data from endpoint /products", products, totalProducts });
+    res.status(200).json({success: true, log: "successfully fetched initial product data from endpoint /products", products: enhancedProducts, totalProducts });
   } catch (error) {
     console.error("Error in /products endpoint:", error);
     handleAxiosFetchError(error, res);
