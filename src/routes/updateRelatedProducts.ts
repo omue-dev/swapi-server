@@ -6,48 +6,48 @@ import axios from 'axios';
 import authenticate from '../middleware/authenticate';
 import { handleAxiosUpdateError } from '../utils/errorHandler';
 import { getHeaders } from '../utils/headers';
+import { convertEditorJsToHtml } from '../utils/editorJsAdapter';
 
 const router = Router();
 const SHOPWARE_API_URL = process.env.API_BASE_URL;
 
-// Funktion zur Validierung und Säuberung von formData
-const cleanFormData = (formData: any) => {
-    const writeProtectedFields = ['id', 'categoryIds']; // Liste der schreibgeschützten Felder
-    for (const field of writeProtectedFields) {
-        if (formData.hasOwnProperty(field)) {
-            delete formData[field];
+const WRITE_PROTECTED_FIELDS = ['id', 'categoryIds'];
+
+const prepareFormData = (formData: any) => {
+    const sanitized = { ...formData };
+
+    const descriptionHtml = convertEditorJsToHtml(sanitized.descriptionEditorJs ?? sanitized.description);
+    if (descriptionHtml !== undefined) {
+        sanitized.description = descriptionHtml;
+    }
+    delete sanitized.descriptionEditorJs;
+
+    for (const field of WRITE_PROTECTED_FIELDS) {
+        if (sanitized.hasOwnProperty(field)) {
+            delete sanitized[field];
         }
     }
-    return formData;
+
+    return sanitized;
 };
 
 // Endpunkt zum Aktualisieren der zugehörigen Produkte
 router.post('/', [authenticate], async (req: Request, res: Response) => {
     const relatedProductsIds = req.body.ids;
-    let formData = req.body.formData;
+    const formData = prepareFormData(req.body.formData);
 
-    // Entfernen der schreibgeschützten Felder
-    formData = cleanFormData(formData);
-
-    //console.log('relatedProductsIds:', relatedProductsIds);
-    //console.log('formData:', formData);
-    
     try {
-        // Verarbeitung der Anfragen an die zugehörigen Produkte
         const updatePromises = relatedProductsIds.map(async (relatedProductId: any) => {
-            //console.log('relatedProductId:', relatedProductId);
-
             try {
                 const response = await axios.request({
                     method: 'PATCH',
-                    url: `${SHOPWARE_API_URL}/product/${relatedProductId}`, // Annahme: Endpunkt zur Aktualisierung eines Produkts nach seiner ID
+                    url: `${SHOPWARE_API_URL}/product/${relatedProductId}`,
                     headers: getHeaders(req),
-                    data: formData // Senden der gesamten Produktinformationen ohne die schreibgeschützten Felder
+                    data: formData,
                 });
 
-                return response.data; // Optional: Du könntest die Antwort hier verarbeiten oder einfach weitergeben
+                return response.data;
             } catch (error: any) {
-                // Detaillierte Protokollierung des Fehlers
                 if (error.response) {
                     console.error(`Error updating product ${relatedProductId}:`, error.response.data);
                     if (error.response.data.errors) {
@@ -57,8 +57,8 @@ router.post('/', [authenticate], async (req: Request, res: Response) => {
                                 status: err.status,
                                 detail: err.detail,
                                 template: err.template,
-                                meta: JSON.stringify(err.meta, null, 2), // Details des meta-Objekts
-                                source: JSON.stringify(err.source, null, 2) // Details des source-Objekts
+                                meta: JSON.stringify(err.meta, null, 2),
+                                source: JSON.stringify(err.source, null, 2),
                             });
                         });
                     }
@@ -69,7 +69,6 @@ router.post('/', [authenticate], async (req: Request, res: Response) => {
             }
         });
 
-        // Alle Anfragen gleichzeitig durchführen und auf Abschluss warten
         const results = await Promise.all(updatePromises);
 
         res.status(200).json({ success: true, results });

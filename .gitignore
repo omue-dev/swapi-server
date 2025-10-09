@@ -2,4 +2,3 @@ node_modules/
 dist
 .env
 Bestellungen.csv
-src/utils/authCredentials.ts

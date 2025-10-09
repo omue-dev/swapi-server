@@ -24,7 +24,10 @@ This repository contains a small Express server written in TypeScript. It serves
    REDIS_URL=redis://127.0.0.1:6379
    PORT=5000
    ```
-4. **API Credentials**
+4. **Rich-text payloads (Editor.js)**
+   The server now expects product description updates in the [Editor.js](https://editorjs.io) block format. Send the editor output in the field `descriptionEditorJs` when calling the update endpoints. The server will convert the blocks to HTML for Shopware and will also expose `descriptionEditorJs` alongside the legacy HTML in read operations.
+
+5. **API Credentials**
    Create a new file `src/utils/authCredentials.ts`:
    ```env
    const credentials = {
@@ -35,11 +38,11 @@ This repository contains a small Express server written in TypeScript. It serves
    export default credentials;
    ```
 
-5. **Build the project**
+6. **Build the project**
    ```bash
    npm run build
    ```
-6. **Run the server**
+7. **Run the server**
    ```bash
    npm start
    ```
