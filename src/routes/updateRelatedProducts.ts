@@ -1,81 +1,85 @@
-// updateRelatedProducts.ts
 import dotenv from 'dotenv';
 dotenv.config();
 import { Router, Request, Response } from 'express';
 import axios from 'axios';
-import authenticate from '../middleware/authenticate';
 import { handleAxiosUpdateError } from '../utils/errorHandler';
-import { getHeaders } from '../utils/headers';
+import { getAuthToken } from '../utils/getAuthToken.js'; // 🔄 ersetzt getHeaders
 
 const router = Router();
-const SHOPWARE_API_URL = process.env.API_BASE_URL;
+const SHOPWARE_API_URL = process.env.SHOPWARE_API_URL; // 🔄 vereinheitlicht
 
-// Funktion zur Validierung und Säuberung von formData
+// 🧹 Funktion zur Bereinigung der Formdaten
 const cleanFormData = (formData: any) => {
-    const writeProtectedFields = ['id', 'categoryIds']; // Liste der schreibgeschützten Felder
-    for (const field of writeProtectedFields) {
-        if (formData.hasOwnProperty(field)) {
-            delete formData[field];
-        }
+  const writeProtectedFields = ['id', 'categoryIds']; // nicht änderbare Felder
+  for (const field of writeProtectedFields) {
+    if (formData.hasOwnProperty(field)) {
+      delete formData[field];
     }
-    return formData;
+  }
+  return formData;
 };
 
-// Endpunkt zum Aktualisieren der zugehörigen Produkte
-router.post('/', [authenticate], async (req: Request, res: Response) => {
-    const relatedProductsIds = req.body.ids;
-    let formData = req.body.formData;
+// 🧩 Endpunkt zum Aktualisieren mehrerer zugehöriger Produkte
+router.post('/', async (req: Request, res: Response) => {
+  const relatedProductsIds = req.body.ids;
+  let formData = req.body.formData;
 
-    // Entfernen der schreibgeschützten Felder
-    formData = cleanFormData(formData);
+  if (!Array.isArray(relatedProductsIds) || relatedProductsIds.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'No related product IDs provided.',
+    });
+  }
 
-    //console.log('relatedProductsIds:', relatedProductsIds);
-    //console.log('formData:', formData);
-    
-    try {
-        // Verarbeitung der Anfragen an die zugehörigen Produkte
-        const updatePromises = relatedProductsIds.map(async (relatedProductId: any) => {
-            //console.log('relatedProductId:', relatedProductId);
+  // Schreibgeschützte Felder entfernen
+  formData = cleanFormData(formData);
 
-            try {
-                const response = await axios.request({
-                    method: 'PATCH',
-                    url: `${SHOPWARE_API_URL}/product/${relatedProductId}`, // Annahme: Endpunkt zur Aktualisierung eines Produkts nach seiner ID
-                    headers: getHeaders(req),
-                    data: formData // Senden der gesamten Produktinformationen ohne die schreibgeschützten Felder
-                });
+  try {
+    const token = await getAuthToken(); // 🪙 Neues Token-System
+    console.log(`🧩 Updating ${relatedProductsIds.length} related products...`);
 
-                return response.data; // Optional: Du könntest die Antwort hier verarbeiten oder einfach weitergeben
-            } catch (error: any) {
-                // Detaillierte Protokollierung des Fehlers
-                if (error.response) {
-                    console.error(`Error updating product ${relatedProductId}:`, error.response.data);
-                    if (error.response.data.errors) {
-                        error.response.data.errors.forEach((err: any) => {
-                            console.error('Error detail:', {
-                                code: err.code,
-                                status: err.status,
-                                detail: err.detail,
-                                template: err.template,
-                                meta: JSON.stringify(err.meta, null, 2), // Details des meta-Objekts
-                                source: JSON.stringify(err.source, null, 2) // Details des source-Objekts
-                            });
-                        });
-                    }
-                } else {
-                    console.error(`Error updating product ${relatedProductId}:`, error.message);
-                }
-                throw error;
-            }
-        });
+    // 🔁 Parallelisierte PATCH-Anfragen
+    const updatePromises = relatedProductsIds.map(async (relatedProductId: string) => {
+      try {
+        const response = await axios.patch(
+          `${SHOPWARE_API_URL}/product/${relatedProductId}`,
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+              'Content-Type': 'application/json',
+            },
+          }
+        );
 
-        // Alle Anfragen gleichzeitig durchführen und auf Abschluss warten
-        const results = await Promise.all(updatePromises);
+        console.log(`✅ Produkt ${relatedProductId} erfolgreich aktualisiert.`);
+        return { id: relatedProductId, status: 'success', data: response.data };
+      } catch (error: any) {
+        console.error(`❌ Fehler beim Aktualisieren von Produkt ${relatedProductId}:`, error.message);
 
-        res.status(200).json({ success: true, results });
-    } catch (error: any) {
-        handleAxiosUpdateError(error, res);
-    }
+        if (error.response) {
+          console.error('📦 Shopware response:', JSON.stringify(error.response.data, null, 2));
+        }
+
+        return { id: relatedProductId, status: 'error', error: error.message };
+      }
+    });
+
+    // 🧠 Alle Requests abwarten
+    const results = await Promise.all(updatePromises);
+
+    console.log(`🧮 Update abgeschlossen: ${results.length} Produkte verarbeitet.`);
+
+    res.status(200).json({
+      success: true,
+      log: 'All related products updated successfully',
+      results,
+    });
+  } catch (error) {
+    console.error('❌ Fehler im /update-related-products Endpoint:', error);
+    handleAxiosUpdateError(error, res);
+  }
 });
 
 export default router;

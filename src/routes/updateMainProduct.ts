@@ -2,46 +2,59 @@ import dotenv from 'dotenv';
 dotenv.config();
 import { Router, Request, Response } from 'express';
 import axios from 'axios';
-import authenticate from '../middleware/authenticate';
 import { handleAxiosUpdateError } from '../utils/errorHandler';
-import { getHeaders } from '../utils/headers';
+import { getAuthToken } from '../utils/getAuthToken.js'; // 🔄 ersetzt getHeaders
 
 const router = Router();
-const SHOPWARE_API_URL = process.env.API_BASE_URL;
+const SHOPWARE_API_URL = process.env.SHOPWARE_API_URL; // 🔄 konsistent mit allen anderen Routen
 
-// Endpunkt zum Aktualisieren des Hauptprodukts
-router.post('/', [authenticate], async (req: Request, res: Response) => {
-    const formData = req.body;
-    const id = formData.id;
+// 🧩 Endpunkt zum Aktualisieren des Hauptprodukts
+router.post('/', async (req: Request, res: Response) => {
+  const formData = req.body;
+  const { id } = formData;
 
-    const payload = {
-        id: formData.id,
-        description: formData.description,
-        metaDescription: formData.metaDescription,
-        metaTitle: formData.metaTitle,
-        keywords: formData.keywords,
-        customFields: formData.customFields
-    };
+  if (!id) {
+    return res.status(400).json({
+      success: false,
+      message: 'Missing product ID',
+    });
+  }
 
-    const options = {
-        method: 'PATCH',
-        url: `${SHOPWARE_API_URL}/product/${id}`,
-        headers: getHeaders(req),
-        data: payload
-    };
+  const payload = {
+    id,
+    description: formData.description,
+    metaDescription: formData.metaDescription,
+    metaTitle: formData.metaTitle,
+    keywords: formData.keywords,
+    customFields: formData.customFields,
+  };
 
-    try {
-        //console.log(`PATCH request to ${options.url} with data:`, options.data); // Logging hinzugefügt
+  try {
+    const token = await getAuthToken(); // 🪙 neues Token-System
+    console.log(`🛠️ Updating main product ${id}...`);
 
-        const { data } = await axios.request({
-            ...options,
-            method: 'PATCH',
-        });
+    const response = await axios.patch(
+      `${SHOPWARE_API_URL}/product/${id}`,
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`, // ✅ Auth via Token
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+      }
+    );
 
-        res.status(200).json({ success: true, data });
-    } catch (error: any) {
-        handleAxiosUpdateError(error, res);
-    }
+    console.log(`✅ Produkt ${id} erfolgreich aktualisiert.`);
+    res.status(200).json({
+      success: true,
+      log: `Product ${id} updated successfully`,
+      data: response.data,
+    });
+  } catch (error) {
+    console.error(`❌ Fehler beim Aktualisieren von Produkt ${id}:`, error);
+    handleAxiosUpdateError(error, res);
+  }
 });
 
 export default router;
