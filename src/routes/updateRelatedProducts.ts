@@ -1,81 +1,107 @@
-// updateRelatedProducts.ts
 import dotenv from 'dotenv';
 dotenv.config();
 import { Router, Request, Response } from 'express';
 import axios from 'axios';
-import authenticate from '../middleware/authenticate';
 import { handleAxiosUpdateError } from '../utils/errorHandler';
-import { getHeaders } from '../utils/headers';
+import { getAuthToken } from '../utils/getAuthToken.js';
 
 const router = Router();
-const SHOPWARE_API_URL = process.env.API_BASE_URL;
+const SHOPWARE_API_URL = process.env.SHOPWARE_API_URL;
 
-// Funktion zur Validierung und Säuberung von formData
-const cleanFormData = (formData: any) => {
-    const writeProtectedFields = ['id', 'categoryIds']; // Liste der schreibgeschützten Felder
-    for (const field of writeProtectedFields) {
-        if (formData.hasOwnProperty(field)) {
-            delete formData[field];
-        }
-    }
-    return formData;
+// 🧩 Mapping für Geschlechter → Property-Option-IDs
+const genderMap: Record<string, string> = {
+  Herren: "018a4585e4437be7ab54ba0ff589bb45",
+  Damen: "018a45866d8a7349bea228f98f2f48a1",
+  Unisex: "018a4586ac097640aac8f5906a0dc22e",
+  Kids: "018a45875450739d8ed5a67fbeda0244",
 };
 
-// Endpunkt zum Aktualisieren der zugehörigen Produkte
-router.post('/', [authenticate], async (req: Request, res: Response) => {
-    const relatedProductsIds = req.body.ids;
-    let formData = req.body.formData;
+// Fixe Property Group ID (Geschlecht)
+const GENDER_GROUP_ID = "018a4581b03a7d8bbc3d9c582f924bc3";
 
-    // Entfernen der schreibgeschützten Felder
-    formData = cleanFormData(formData);
+// 🧹 Funktion zur Bereinigung der Formdaten
+const cleanFormData = (formData: any) => {
+  const writeProtectedFields = ['id', 'categoryIds'];
+  for (const field of writeProtectedFields) {
+    delete formData[field];
+  }
+  return formData;
+};
 
-    //console.log('relatedProductsIds:', relatedProductsIds);
-    //console.log('formData:', formData);
-    
-    try {
-        // Verarbeitung der Anfragen an die zugehörigen Produkte
-        const updatePromises = relatedProductsIds.map(async (relatedProductId: any) => {
-            //console.log('relatedProductId:', relatedProductId);
+// 🧩 Endpunkt zum Aktualisieren mehrerer zugehöriger Produkte
+router.post('/', async (req: Request, res: Response) => {
+  const relatedProductsIds = req.body.ids;
+  let formData = req.body.formData;
 
-            try {
-                const response = await axios.request({
-                    method: 'PATCH',
-                    url: `${SHOPWARE_API_URL}/product/${relatedProductId}`, // Annahme: Endpunkt zur Aktualisierung eines Produkts nach seiner ID
-                    headers: getHeaders(req),
-                    data: formData // Senden der gesamten Produktinformationen ohne die schreibgeschützten Felder
-                });
+  if (!Array.isArray(relatedProductsIds) || relatedProductsIds.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'No related product IDs provided.',
+    });
+  }
 
-                return response.data; // Optional: Du könntest die Antwort hier verarbeiten oder einfach weitergeben
-            } catch (error: any) {
-                // Detaillierte Protokollierung des Fehlers
-                if (error.response) {
-                    console.error(`Error updating product ${relatedProductId}:`, error.response.data);
-                    if (error.response.data.errors) {
-                        error.response.data.errors.forEach((err: any) => {
-                            console.error('Error detail:', {
-                                code: err.code,
-                                status: err.status,
-                                detail: err.detail,
-                                template: err.template,
-                                meta: JSON.stringify(err.meta, null, 2), // Details des meta-Objekts
-                                source: JSON.stringify(err.source, null, 2) // Details des source-Objekts
-                            });
-                        });
-                    }
-                } else {
-                    console.error(`Error updating product ${relatedProductId}:`, error.message);
-                }
-                throw error;
-            }
-        });
+  // Schreibgeschützte Felder entfernen
+  formData = cleanFormData(formData);
 
-        // Alle Anfragen gleichzeitig durchführen und auf Abschluss warten
-        const results = await Promise.all(updatePromises);
+  // 👇 Gender zu Properties hinzufügen, falls vorhanden
+  const genderValue =
+    formData.gender || formData.customFields?.custom_add_product_attributes_gender;
 
-        res.status(200).json({ success: true, results });
-    } catch (error: any) {
-        handleAxiosUpdateError(error, res);
-    }
+  if (genderValue && genderMap[genderValue]) {
+    formData.properties = [
+      {
+        id: genderMap[genderValue],
+        groupId: GENDER_GROUP_ID,
+      },
+    ];
+  }
+
+  try {
+    const token = await getAuthToken();
+    console.log(`🧩 Updating ${relatedProductsIds.length} related products...`);
+
+    // 🔁 Parallelisierte PATCH-Anfragen
+    const updatePromises = relatedProductsIds.map(async (relatedProductId: string) => {
+      try {
+        const response = await axios.patch(
+          `${SHOPWARE_API_URL}/product/${relatedProductId}`,
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: 'application/json',
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        console.log(`✅ Produkt ${relatedProductId} erfolgreich aktualisiert.`);
+        return { id: relatedProductId, status: 'success', data: response.data };
+      } catch (error: any) {
+        console.error(`❌ Fehler beim Aktualisieren von Produkt ${relatedProductId}:`, error.message);
+
+        if (error.response) {
+          console.error('📦 Shopware response:', JSON.stringify(error.response.data, null, 2));
+        }
+
+        return { id: relatedProductId, status: 'error', error: error.message };
+      }
+    });
+
+    // 🧠 Alle Requests abwarten
+    const results = await Promise.all(updatePromises);
+
+    console.log(`🧮 Update abgeschlossen: ${results.length} Produkte verarbeitet.`);
+
+    res.status(200).json({
+      success: true,
+      log: 'All related products updated successfully',
+      results,
+    });
+  } catch (error) {
+    console.error('❌ Fehler im /update-related-products Endpoint:', error);
+    handleAxiosUpdateError(error, res);
+  }
 });
 
 export default router;
