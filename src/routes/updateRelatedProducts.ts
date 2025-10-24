@@ -3,18 +3,27 @@ dotenv.config();
 import { Router, Request, Response } from 'express';
 import axios from 'axios';
 import { handleAxiosUpdateError } from '../utils/errorHandler';
-import { getAuthToken } from '../utils/getAuthToken.js'; // 🔄 ersetzt getHeaders
+import { getAuthToken } from '../utils/getAuthToken.js';
 
 const router = Router();
-const SHOPWARE_API_URL = process.env.SHOPWARE_API_URL; // 🔄 vereinheitlicht
+const SHOPWARE_API_URL = process.env.SHOPWARE_API_URL;
+
+// 🧩 Mapping für Geschlechter → Property-Option-IDs
+const genderMap: Record<string, string> = {
+  Herren: "018a4585e4437be7ab54ba0ff589bb45",
+  Damen: "018a45866d8a7349bea228f98f2f48a1",
+  Unisex: "018a4586ac097640aac8f5906a0dc22e",
+  Kids: "018a45875450739d8ed5a67fbeda0244",
+};
+
+// Fixe Property Group ID (Geschlecht)
+const GENDER_GROUP_ID = "018a4581b03a7d8bbc3d9c582f924bc3";
 
 // 🧹 Funktion zur Bereinigung der Formdaten
 const cleanFormData = (formData: any) => {
-  const writeProtectedFields = ['id', 'categoryIds']; // nicht änderbare Felder
+  const writeProtectedFields = ['id', 'categoryIds'];
   for (const field of writeProtectedFields) {
-    if (formData.hasOwnProperty(field)) {
-      delete formData[field];
-    }
+    delete formData[field];
   }
   return formData;
 };
@@ -34,8 +43,21 @@ router.post('/', async (req: Request, res: Response) => {
   // Schreibgeschützte Felder entfernen
   formData = cleanFormData(formData);
 
+  // 👇 Gender zu Properties hinzufügen, falls vorhanden
+  const genderValue =
+    formData.gender || formData.customFields?.custom_add_product_attributes_gender;
+
+  if (genderValue && genderMap[genderValue]) {
+    formData.properties = [
+      {
+        id: genderMap[genderValue],
+        groupId: GENDER_GROUP_ID,
+      },
+    ];
+  }
+
   try {
-    const token = await getAuthToken(); // 🪙 Neues Token-System
+    const token = await getAuthToken();
     console.log(`🧩 Updating ${relatedProductsIds.length} related products...`);
 
     // 🔁 Parallelisierte PATCH-Anfragen

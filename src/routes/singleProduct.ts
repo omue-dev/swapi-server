@@ -4,7 +4,7 @@ import { Router, Request, Response } from 'express';
 import axios from 'axios';
 import { handleAxiosFetchError } from '../utils/errorHandler';
 import { getAuthToken } from '../utils/getAuthToken.js';
-import { mapShopwareProduct } from '../utils/mapProductResponse'; 
+import { mapShopwareProduct } from '../utils/mapProductResponse';
 
 const router = Router();
 const SHOPWARE_API_URL = process.env.SHOPWARE_API_URL;
@@ -15,17 +15,32 @@ router.get('/:id', async (req: Request, res: Response) => {
   try {
     const token = await getAuthToken();
 
-    const response = await axios.get(`${SHOPWARE_API_URL}/product/${id}`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
+    // 🧩 Statt GET /product/:id → POST /search/product (inkl. properties)
+    const requestBody = {
+      filter: [{ type: 'equals', field: 'id', value: id }],
+      associations: {
+        properties: {
+          associations: {
+            group: {} // sorgt dafür, dass "Geschlecht" → group.name mitkommt
+          }
+        }
       },
-    });
+    };
 
-    const rawProduct = response.data?.data || response.data;
+    const response = await axios.post(
+      `${SHOPWARE_API_URL}/search/product`,
+      requestBody,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+      }
+    );
 
-    // ✅ Falls kein Produkt gefunden wird → sauber abbrechen
+    const rawProduct = response.data?.data?.[0];
+
     if (!rawProduct) {
       console.warn(`⚠️ Kein Produkt mit ID ${id} gefunden.`);
       return res.status(404).json({
@@ -34,37 +49,31 @@ router.get('/:id', async (req: Request, res: Response) => {
       });
     }
 
-    // ✅ Mapping absichern
     const product = mapShopwareProduct(rawProduct);
-    if (!product || !product.attributes) {
-      console.error(`❌ Produkt ${id} konnte nicht korrekt gemappt werden.`);
-      return res.status(500).json({
-        success: false,
-        log: `Product mapping failed for ID ${id}`,
-      });
+
+    // 🧩 Geschlecht aus den Properties lesen
+    let gender = 'Unbekannt';
+    if (Array.isArray(rawProduct.properties)) {
+      const genderProp = rawProduct.properties.find(
+        (prop: any) =>
+          prop.group?.name?.toLowerCase() === 'geschlecht'
+      );
+      if (genderProp && genderProp.name) {
+        gender = genderProp.name;
+      }
     }
 
-    console.log(`✅ Produkt ${id} erfolgreich gemappt.`);
-    console.log('🧩 Produktvorschau:', JSON.stringify(product, null, 2));
+    product.attributes.gender = gender;
+    console.log(`👕 Geschlecht für Produkt ${id}: ${gender}`);
 
-    // ✅ Einheitliches Response-Format
     res.status(200).json({
       success: true,
-      log: 'successfully fetched product data from endpoint /products/:id',
+      log: 'Successfully fetched product data (including gender)',
       product: {
-          data: { // 👈 füge data hinzu, damit das Frontend happy ist
-          id: product.id,
-          attributes: product.attributes
-        }
-      },
+        data: product   // 👈 hier product unter .data verschachteln
+      }
     });
-
-  } catch (error: unknown) {
-    if (error instanceof Error) {
-      console.error(`❌ Fehler beim Laden von Produkt ${req.params.id}:`, error.message);
-    } else {
-      console.error(`❌ Fehler beim Laden von Produkt ${req.params.id}:`, error);
-    }
+  } catch (error) {
     handleAxiosFetchError(error, res);
   }
 });

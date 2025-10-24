@@ -13,6 +13,11 @@ export const mapShopwareProduct = (p: any) => ({
     metaTitle: p.metaTitle || null,
     keywords: p.keywords || null,
     customFields: p.customFields || {},
+    gender:
+      p.featureSet?.features?.Geschlecht ||
+      p.featureSet?.features?.geschlecht ||
+      p.featureSet?.features?.gender ||
+      'Unbekannt',
   },
 });
 
