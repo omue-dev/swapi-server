@@ -34,6 +34,7 @@ router.post('/', async (req: Request, res: Response) => {
   // Grunddaten zusammenstellen
   const payload: any = {
     id,
+    name: formData.name,
     description: formData.description,
     metaDescription: formData.metaDescription,
     metaTitle: formData.metaTitle,

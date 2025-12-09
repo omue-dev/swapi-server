@@ -30,7 +30,10 @@ const cleanFormData = (formData: any) => {
 
 // 🧩 Endpunkt zum Aktualisieren mehrerer zugehöriger Produkte
 router.post('/', async (req: Request, res: Response) => {
-  const relatedProductsIds = req.body.ids;
+  const updates = req.body.updates;
+  const relatedProductsIds = Array.isArray(updates)
+    ? updates.map((u: any) => u.id)
+    : req.body.ids;
   let formData = req.body.formData;
 
   if (!Array.isArray(relatedProductsIds) || relatedProductsIds.length === 0) {
@@ -63,17 +66,21 @@ router.post('/', async (req: Request, res: Response) => {
     // 🔁 Parallelisierte PATCH-Anfragen
     const updatePromises = relatedProductsIds.map(async (relatedProductId: string) => {
       try {
-        const response = await axios.patch(
-          `${SHOPWARE_API_URL}/product/${relatedProductId}`,
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              Accept: 'application/json',
-              'Content-Type': 'application/json',
-            },
-          }
-        );
+        const updateEntry = Array.isArray(updates)
+          ? updates.find((u: any) => u.id === relatedProductId)
+          : null;
+        const payload =
+          updateEntry && updateEntry.name
+            ? { ...formData, name: updateEntry.name }
+            : formData;
+
+        const response = await axios.patch(`${SHOPWARE_API_URL}/product/${relatedProductId}`, payload, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+          },
+        });
 
         console.log(`✅ Produkt ${relatedProductId} erfolgreich aktualisiert.`);
         return { id: relatedProductId, status: 'success', data: response.data };

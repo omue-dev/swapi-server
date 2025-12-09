@@ -55,6 +55,13 @@ router.post('/', checkCache, async (req: Request, res: Response) => {
       ],
       limit: 20,
       'total-count-mode': 'exact',
+      associations: {
+        properties: {
+          associations: {
+            group: {},
+          },
+        },
+      },
     };
 
     const response = await axios.post(

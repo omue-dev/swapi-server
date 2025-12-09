@@ -14,7 +14,7 @@ router.post('/', checkCache, async (req: Request, res: Response) => {
   try {
     // 🪙 Token holen
     const token = await getAuthToken();
-    console.log('🪙 Using token for Shopware request:', token.slice(0, 15) + '...');
+    // console.log('🪙 Using token for Shopware request:', token.slice(0, 15) + '...');
 
     // 🧱 Request-Body vorbereiten (Filter & Sortierung)
     const requestBody = {
@@ -59,7 +59,7 @@ router.post('/', checkCache, async (req: Request, res: Response) => {
       name: category.attributes?.name || category.name || 'Unbenannt',
     }));
 
-    console.log(`✅ Shopware lieferte ${categories.length} Kategorien mit Produkten`);
+    //  console.log(`✅ Shopware lieferte ${categories} Kategorien mit Produkten`);
 
     res.status(200).json({
       success: true,

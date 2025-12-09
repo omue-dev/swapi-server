@@ -41,6 +41,16 @@ router.post('/', async (req: Request, res: Response) => {
           field: 'parentId',
           value: null, // Nur Hauptprodukte, keine Varianten
         },
+        {
+          type: 'range',
+          field: 'stock',
+          parameters: { gte: 1 }, // Lagerbestand >= 1
+        },
+        {
+          type: 'equals',
+          field: 'coverId',
+          value: null, // no product image
+        },
       ],
       sort: [
         {
@@ -48,8 +58,16 @@ router.post('/', async (req: Request, res: Response) => {
           order: sortDirection,
         },
       ],
-      'total-count-mode': 'exact',
+      'total-count-mode': 1, // request exact total count from Shopware
+      associations: {
+        properties: {
+          associations: {
+            group: {},
+          },
+        },
+      },
     };
+    console.log('🔎 /search-products request body:', JSON.stringify(requestBody, null, 2));
 
     // 🛰 Anfrage an Shopware senden
     const response = await axios.post(`${SHOPWARE_API_URL}/search/product`, requestBody, {
@@ -61,16 +79,21 @@ router.post('/', async (req: Request, res: Response) => {
     });
 
     const rawProducts = response.data?.data || [];
+    // console.log('📦 Shopware meta for /search-products:', response.data?.meta);
+    if (rawProducts[0]) {
+      console.log('🖼️ First raw product coverId (search):', rawProducts[0]?.coverId ?? rawProducts[0]?.attributes?.coverId ?? null);
+    }
 
     // 🧩 Einheitliches Mapping mit Utility-Funktion
     const products = rawProducts.map(mapShopwareProduct);
 
     const totalProducts =
       response.data?.meta?.total ??
+      response.data?.total ??
       (Array.isArray(products) ? products.length : 0);
 
-    console.log(`✅ Shopware lieferte ${products.length} Produkte (total: ${totalProducts})`);
-    console.log("🧩 Erstes Produkt:", JSON.stringify(products[0], null, 2));
+    // console.log(`✅ Shopware lieferte ${products.length} Produkte (total: ${totalProducts})`);
+    // console.log("🧩 Erstes Produkt:", JSON.stringify(products[0], null, 2));
 
     res.status(200).json({
       success: true,

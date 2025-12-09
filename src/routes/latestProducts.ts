@@ -26,18 +26,24 @@ router.post('/', async (req: Request, res: Response) => {
 
   try {
     const token = await getAuthToken();
-    console.log('🪙 Using token for Shopware request:', token.slice(0, 15) + '...');
+    // console.log('Filtered latest products:', req.body);
+    // console.log('Manufacturer ID:', manufacturerId);
 
     const filters = [
       {
         type: 'range',
         field: 'stock',
-        parameters: { gte: 1 },
+        parameters: { gte: 1 }, // Lagerbestand >= 1
       },
       {
         type: 'equals',
-        field: 'active',
-        value: false,
+        field: 'parentId',
+        value: null, // only main products, no variants
+      },
+      {
+        type: 'equals',
+        field: 'coverId',
+        value: null, // no product image
       },
     ];
 
@@ -54,8 +60,16 @@ router.post('/', async (req: Request, res: Response) => {
       page: Number(page),
       filter: filters,
       sort: [{ field: sortField, order: sortDirection }],
-      'total-count-mode': 'exact',
+      'total-count-mode': 1, // request exact total count from Shopware
+      associations: {
+        properties: {
+          associations: {
+            group: {},
+          },
+        },
+      },
     };
+    console.log('🔎 /products request body:', JSON.stringify(requestBody, null, 2));
 
     const response = await axios.post(`${SHOPWARE_API_URL}/search/product`, requestBody, {
       headers: {
@@ -66,6 +80,10 @@ router.post('/', async (req: Request, res: Response) => {
     });
 
     const rawProducts = response.data?.data || [];
+    // console.log('📦 Shopware meta for /products:', response.data?.meta);
+    if (rawProducts[0]) {
+      console.log('🖼️ First raw product coverId:', rawProducts[0]?.coverId ?? rawProducts[0]?.attributes?.coverId ?? null);
+    }
 
     // 🧩 Wenn keine Produkte vorhanden sind → trotzdem 200 OK zurückgeben
     if (rawProducts.length === 0) {
@@ -83,10 +101,11 @@ router.post('/', async (req: Request, res: Response) => {
 
     const totalProducts =
       response.data?.meta?.total ??
+      response.data?.total ??
       (Array.isArray(products) ? products.length : 0);
 
-    console.log(`✅ Shopware lieferte ${products.length} Produkte (total: ${totalProducts})`);
-    console.log('🧩 Erstes Produkt:', JSON.stringify(products[0], null, 2));
+    // console.log(`✅ Shopware lieferte ${products.length} Produkte (total: ${totalProducts})`);
+    // console.log('🧩 Erstes Produkt:', JSON.stringify(products[0], null, 2));
 
     res.status(200).json({
       success: true,

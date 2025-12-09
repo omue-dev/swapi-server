@@ -18,6 +18,13 @@ export const mapShopwareProduct = (p: any) => ({
       p.featureSet?.features?.geschlecht ||
       p.featureSet?.features?.gender ||
       'Unbekannt',
+    color: Array.isArray(p.properties)
+      ? (p.properties.find(
+          (prop: any) =>
+            prop.group?.name?.toLowerCase() === 'farbe' ||
+            prop.group?.translated?.name?.toLowerCase() === 'farbe',
+        )?.name || null)
+      : null,
   },
 });
 
