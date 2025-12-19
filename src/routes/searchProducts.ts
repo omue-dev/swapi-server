@@ -5,7 +5,7 @@ import axios from 'axios';
 import { isValidSortField } from '../utils/vaildation';
 import { handleAxiosFetchError } from '../utils/errorHandler';
 import { getAuthToken } from '../utils/getAuthToken.js';
-import { mapShopwareProduct } from '../utils/mapProductResponse'; // 🧩 NEU: Mapping importieren
+import { mapShopwareProduct } from '../utils/mapProductResponse';
 
 const router = Router();
 const SHOPWARE_API_URL = process.env.SHOPWARE_API_URL;
@@ -17,6 +17,7 @@ router.post('/', async (req: Request, res: Response) => {
     limit = 10,
     sortField = 'name',
     sortDirection = 'asc',
+    manufacturerId,
   } = req.body;
 
   if (!isValidSortField(sortField)) {
@@ -24,34 +25,58 @@ router.post('/', async (req: Request, res: Response) => {
   }
 
   try {
-    // 🪙 Token holen
     const token = await getAuthToken();
+
+    const baseFilters = [
+      {
+        type: 'range',
+        field: 'stock',
+        parameters: { gte: 1 }, // Lagerbestand >= 1
+      },
+      {
+        type: 'equals',
+        field: 'parentId',
+        value: null, // Nur Hauptprodukte, keine Varianten
+      },
+      {
+        type: 'equals',
+        field: 'coverId',
+        value: null, // no product image
+      },
+    ];
+
+    if (manufacturerId) {
+      baseFilters.push({
+        type: 'equals',
+        field: 'manufacturerId',
+        value: manufacturerId,
+      });
+    }
+
+    // Bei Suche alle Produkte holen, die den Suchbegriff matchen, ohne zusätzliche Basisfilter
+    const filters = searchTerm
+      ? [
+          {
+            type: 'contains',
+            field: 'name',
+            value: searchTerm,
+          },
+          ...(manufacturerId
+            ? [
+                {
+                  type: 'equals',
+                  field: 'manufacturerId',
+                  value: manufacturerId,
+                },
+              ]
+            : []),
+        ]
+      : baseFilters;
 
     const requestBody = {
       limit: Number(limit),
       page: Number(page),
-      filter: [
-        {
-          type: 'contains',
-          field: 'name',
-          value: searchTerm,
-        },
-        {
-          type: 'equals',
-          field: 'parentId',
-          value: null, // Nur Hauptprodukte, keine Varianten
-        },
-        {
-          type: 'range',
-          field: 'stock',
-          parameters: { gte: 1 }, // Lagerbestand >= 1
-        },
-        {
-          type: 'equals',
-          field: 'coverId',
-          value: null, // no product image
-        },
-      ],
+      filter: filters,
       sort: [
         {
           field: sortField,
