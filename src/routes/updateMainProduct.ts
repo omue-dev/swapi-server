@@ -3,12 +3,13 @@ dotenv.config();
 import { Router, Request, Response } from 'express';
 import axios from 'axios';
 import { handleAxiosUpdateError } from '../utils/errorHandler';
-import { getAuthToken } from '../utils/getAuthToken.js';
+import { getAuthToken } from '../utils/getAuthToken';
+import { requireApiKey } from '../utils/authMiddleware';
 
 const router = Router();
 const SHOPWARE_API_URL = process.env.SHOPWARE_API_URL;
 
-// 🎯 Mapping für Geschlecht -> Property-Option-ID
+// Mapping for gender -> Property-Option-ID
 const genderMap: Record<string, string> = {
   Herren: "018a4585e4437be7ab54ba0ff589bb45",
   Damen: "018a45866d8a7349bea228f98f2f48a1",
@@ -16,11 +17,10 @@ const genderMap: Record<string, string> = {
   Kids: "018a45875450739d8ed5a67fbeda0244",
 };
 
-// Fixe Group-ID für Geschlecht
+// Fixed Group-ID for gender
 const GENDER_GROUP_ID = "018a4581b03a7d8bbc3d9c582f924bc3";
 
-// 🧩 Endpunkt zum Aktualisieren des Hauptprodukts
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', requireApiKey, async (req: Request, res: Response) => {
   const formData = req.body;
   const { id } = formData;
 
@@ -58,8 +58,6 @@ router.post('/', async (req: Request, res: Response) => {
   try {
     const token = await getAuthToken();
 
-    console.log(`🛠️ Updating main product ${id}...`);
-
     const response = await axios.patch(
       `${SHOPWARE_API_URL}/product/${id}`,
       payload,
@@ -72,14 +70,12 @@ router.post('/', async (req: Request, res: Response) => {
       }
     );
 
-    console.log(`✅ Produkt ${id} erfolgreich aktualisiert.`);
     res.status(200).json({
       success: true,
       log: `Product ${id} updated successfully`,
       data: response.data,
     });
   } catch (error) {
-    console.error(`❌ Fehler beim Aktualisieren von Produkt ${id}:`, error);
     handleAxiosUpdateError(error, res);
   }
 });

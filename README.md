@@ -6,6 +6,7 @@ This repository contains a small Express server written in TypeScript. It serves
 - Retrieve latest products and manufacturers
 - Search and fetch single products
 - Generate order CSV files
+- API key authentication for mutation endpoints
 
 ## Getting Started
 1. **Clone the repository**
@@ -18,18 +19,32 @@ This repository contains a small Express server written in TypeScript. It serves
    npm install
    ```
 3. **Environment variables**
-   Create a `.env` file in the project root. Example:
-   ```env
-   API_BASE_URL=https://your-shop-domain/api
-   REDIS_URL=redis://127.0.0.1:6379
-   PORT=5000
+   Copy the example file and fill in your values:
+   ```bash
+   cp .env.example .env
    ```
+
+   | Variable | Description |
+   |----------|-------------|
+   | `REDIS_URL` | Redis connection URL for caching |
+   | `PORT` | Server port (default: 5000) |
+   | `SHOPWARE_API_URL` | Shopware API base URL |
+   | `SHOPWARE_CLIENT_ID` | Shopware API client ID |
+   | `SHOPWARE_CLIENT_SECRET` | Shopware API client secret |
+   | `API_BASE_URL` | Base URL for API requests |
+   | `API_KEY` | API key for authenticating mutation requests |
+
+   Generate a secure API key:
+   ```bash
+   openssl rand -hex 32
+   ```
+
 4. **API Credentials**
    Create a new file `src/utils/authCredentials.ts`:
-   ```env
+   ```typescript
    const credentials = {
-     username: 'YOUR-API-USERNAME', 
-    password: 'YOUR-API-PASSWORD'  
+     username: 'YOUR-API-USERNAME',
+     password: 'YOUR-API-PASSWORD'
    };
 
    export default credentials;
@@ -45,3 +60,15 @@ This repository contains a small Express server written in TypeScript. It serves
    ```
 
 The server will start on the configured port and expose the API routes under `/api`.
+
+## Authentication
+
+Mutation endpoints (POST, PUT, PATCH, DELETE) require the `X-API-Key` header. GET requests do not require authentication.
+
+Example:
+```bash
+curl -X PATCH http://localhost:5000/api/products/123 \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '{"name": "Updated Product"}'
+```
