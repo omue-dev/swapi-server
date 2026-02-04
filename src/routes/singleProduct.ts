@@ -3,7 +3,7 @@ dotenv.config();
 import { Router, Request, Response } from 'express';
 import axios from 'axios';
 import { handleAxiosFetchError } from '../utils/errorHandler';
-import { getAuthToken } from '../utils/getAuthToken.js';
+import { getAuthToken } from '../utils/getAuthToken';
 import { mapShopwareProduct } from '../utils/mapProductResponse';
 
 const router = Router();
@@ -42,7 +42,6 @@ router.get('/:id', async (req: Request, res: Response) => {
     const rawProduct = response.data?.data?.[0];
 
     if (!rawProduct) {
-      console.warn(`⚠️ Kein Produkt mit ID ${id} gefunden.`);
       return res.status(404).json({
         success: false,
         log: `No product found with ID ${id}`,
@@ -51,7 +50,6 @@ router.get('/:id', async (req: Request, res: Response) => {
 
     const product = mapShopwareProduct(rawProduct);
 
-    // 🧩 Geschlecht aus den Properties lesen
     let gender = 'Unbekannt';
     if (Array.isArray(rawProduct.properties)) {
       const genderProp = rawProduct.properties.find(
@@ -64,7 +62,6 @@ router.get('/:id', async (req: Request, res: Response) => {
     }
 
     product.attributes.gender = gender;
-    console.log(`👕 Geschlecht für Produkt ${id}: ${gender}`);
 
     res.status(200).json({
       success: true,

@@ -4,7 +4,7 @@ import { Router, Request, Response } from 'express';
 import axios from 'axios';
 import { checkCache } from '../utils/cacheMiddleware';
 import { handleAxiosFetchError } from '../utils/errorHandler';
-import { getAuthToken } from '../utils/getAuthToken.js'; // 🔄 neu: Token via Client Credentials
+import { getAuthToken } from '../utils/getAuthToken';
 
 const router = Router();
 const SHOPWARE_API_URL = process.env.SHOPWARE_API_URL; // 🔄 vereinheitlicht: gleiche ENV-Variable wie in anderen Endpoints
@@ -67,7 +67,6 @@ router.post('/', checkCache, async (req: Request, res: Response) => {
       categories,
     });
   } catch (error) {
-    console.error('❌ Error in /categories-with-products endpoint:', error);
     handleAxiosFetchError(error, res);
   }
 });

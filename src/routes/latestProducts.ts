@@ -2,15 +2,14 @@ import dotenv from 'dotenv';
 dotenv.config();
 import { Router, Request, Response } from 'express';
 import axios from 'axios';
-import { isValidSortField } from '../utils/vaildation';
+import { isValidSortField, isValidSortDirection } from '../utils/validation';
 import { handleAxiosFetchError } from '../utils/errorHandler';
-import { getAuthToken } from '../utils/getAuthToken.js';
-import { mapShopwareProduct } from '../utils/mapProductResponse'; // 🧩 NEU
+import { getAuthToken } from '../utils/getAuthToken';
+import { mapShopwareProduct } from '../utils/mapProductResponse';
 
 const router = Router();
 const SHOPWARE_API_URL = process.env.SHOPWARE_API_URL;
 
-// Endpunkt für das Abrufen der Artikel
 router.post('/', async (req: Request, res: Response) => {
   const {
     page = 1,
@@ -21,7 +20,11 @@ router.post('/', async (req: Request, res: Response) => {
   } = req.body;
 
   if (!isValidSortField(sortField)) {
-    return res.status(400).send(`Invalid sortField: ${sortField}`);
+    return res.status(400).json({ success: false, message: `Invalid sortField: ${sortField}` });
+  }
+
+  if (!isValidSortDirection(sortDirection)) {
+    return res.status(400).json({ success: false, message: `Invalid sortDirection: ${sortDirection}` });
   }
 
   try {
@@ -69,8 +72,6 @@ router.post('/', async (req: Request, res: Response) => {
         },
       },
     };
-    console.log('🔎 /products request body:', JSON.stringify(requestBody, null, 2));
-
     const response = await axios.post(`${SHOPWARE_API_URL}/search/product`, requestBody, {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -80,14 +81,8 @@ router.post('/', async (req: Request, res: Response) => {
     });
 
     const rawProducts = response.data?.data || [];
-    // console.log('📦 Shopware meta for /products:', response.data?.meta);
-    if (rawProducts[0]) {
-      console.log('🖼️ First raw product coverId:', rawProducts[0]?.coverId ?? rawProducts[0]?.attributes?.coverId ?? null);
-    }
 
-    // 🧩 Wenn keine Produkte vorhanden sind → trotzdem 200 OK zurückgeben
     if (rawProducts.length === 0) {
-      console.warn('⚠️ Keine neuesten Produkte gefunden');
       return res.status(200).json({
         success: true,
         log: 'No latest products available',
@@ -96,16 +91,12 @@ router.post('/', async (req: Request, res: Response) => {
       });
     }
 
-    // 🧩 Mapping Utility nutzen statt Inline-Code
     const products = rawProducts.map(mapShopwareProduct);
 
     const totalProducts =
       response.data?.meta?.total ??
       response.data?.total ??
       (Array.isArray(products) ? products.length : 0);
-
-    // console.log(`✅ Shopware lieferte ${products.length} Produkte (total: ${totalProducts})`);
-    // console.log('🧩 Erstes Produkt:', JSON.stringify(products[0], null, 2));
 
     res.status(200).json({
       success: true,
@@ -114,12 +105,6 @@ router.post('/', async (req: Request, res: Response) => {
       totalProducts,
     });
   } catch (error: unknown) {
-    if (error instanceof Error) {
-      console.error('❌ Error in /products endpoint:', error.message);
-    } else {
-      console.error('❌ Unknown error in /products endpoint:', error);
-    }
-
     handleAxiosFetchError(error, res);
   }
 });

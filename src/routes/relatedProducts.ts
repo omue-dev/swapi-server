@@ -4,7 +4,7 @@ import { Router, Request, Response } from 'express';
 import axios from 'axios';
 import { checkCache } from '../utils/cacheMiddleware';
 import { handleAxiosFetchError } from '../utils/errorHandler';
-import { getAuthToken } from '../utils/getAuthToken.js';
+import { getAuthToken } from '../utils/getAuthToken';
 import { mapShopwareProductFlat } from '../utils/mapProductResponse';
 
 const router = Router();
@@ -78,9 +78,7 @@ router.post('/', checkCache, async (req: Request, res: Response) => {
 
     const rawProducts = response.data?.data || [];
 
-    // 🧩 Falls keine Produkte gefunden → leeres Array zurückgeben
     if (rawProducts.length === 0) {
-      console.warn(`⚠️ Keine verwandten Produkte für "${productName}" gefunden.`);
       return res.status(200).json({
         success: true,
         log: `No related products found for "${productName}"`,
@@ -88,13 +86,7 @@ router.post('/', checkCache, async (req: Request, res: Response) => {
       });
     }
 
-    // 🧩 Einheitliches Mapping
     const relatedProducts = rawProducts.map(mapShopwareProductFlat);
-
-    console.log(
-      `✅ Shopware lieferte ${relatedProducts.length} verwandte Produkte für "${productName}"`
-    );
-    console.log('🧩 Erstes verwandtes Produkt:', JSON.stringify(relatedProducts[0], null, 2));
 
     res.status(200).json({
       success: true,
@@ -102,7 +94,6 @@ router.post('/', checkCache, async (req: Request, res: Response) => {
       relatedProducts,
     });
   } catch (error) {
-    console.error('❌ Error in /related-products:', error);
     handleAxiosFetchError(error, res);
   }
 });

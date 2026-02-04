@@ -3,7 +3,7 @@ dotenv.config();
 import { Router, Request, Response } from 'express';
 import axios from 'axios';
 import { handleAxiosFetchError } from '../utils/errorHandler';
-import { getAuthToken } from '../utils/getAuthToken.js';
+import { getAuthToken } from '../utils/getAuthToken';
 
 const router = Router();
 const SHOPWARE_API_URL = process.env.SHOPWARE_API_URL;
@@ -35,14 +35,12 @@ router.post('/', async (req: Request, res: Response) => {
     const manufacturers = response.data?.data || [];
 
     if (manufacturers.length === 0) {
-      console.warn('⚠️ Keine Hersteller mit Medien gefunden');
       return res.status(200).json({
         data: [],
         meta: { total: 0 },
       });
     }
 
-    // 🧩 altes Frontend-kompatibles Format wiederherstellen
     const formattedManufacturers = manufacturers.map((m: any) => ({
       id: m.id,
       attributes: {
@@ -53,20 +51,11 @@ router.post('/', async (req: Request, res: Response) => {
       },
     }));
 
-    console.log(
-      `✅ Shopware lieferte ${formattedManufacturers.length} Hersteller mit Medien`
-    );
-    console.log(
-      '🧩 Erster Manufacturer:',
-      JSON.stringify(formattedManufacturers[0], null, 2)
-    );
-
     res.status(200).json({
       data: formattedManufacturers,
       meta: { total: formattedManufacturers.length },
     });
   } catch (error) {
-    console.error('❌ Error in /product-manufacturer:', error);
     handleAxiosFetchError(error, res);
   }
 });
