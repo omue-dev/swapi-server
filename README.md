@@ -1,60 +1,60 @@
 # Shopware API Server
 
-Express.js/TypeScript Server als Wrapper für die Shopware 6 API. Stellt vereinfachte Endpunkte für Produktdaten, Kategorien und Hersteller bereit.
+Express.js/TypeScript server that wraps the Shopware 6 API. Provides simplified endpoints for product data, categories, and manufacturers.
 
 ## Features
 
-- Produkte abrufen mit Pagination, Filterung und Sortierung
-- Produktsuche nach Name
-- Einzelprodukt-Details mit Eigenschaften (Gender, Farben)
-- Verwandte Produkte finden
-- Hersteller und Kategorien abrufen
-- Produkte aktualisieren (mit API-Key-Authentifizierung)
-- Rate Limiting (100 Requests / 15 Min)
-- OAuth 2.0 Token-Management mit Auto-Refresh
+- Fetch products with pagination, filtering, and sorting
+- Search products by name
+- Single product details with properties (gender, colors)
+- Find related products
+- Fetch manufacturers and categories
+- Update products (with API key authentication)
+- Rate limiting (100 requests / 15 min)
+- OAuth 2.0 token management with auto-refresh
 
 ## Tech Stack
 
 - **Runtime:** Node.js >= 22.11.0
 - **Framework:** Express.js 4.17
-- **Sprache:** TypeScript 5.4
+- **Language:** TypeScript 5.4
 - **HTTP Client:** Axios
 - **Security:** express-rate-limit, CORS, CSP Headers
 
 ## Getting Started
 
-### 1. Repository klonen
+### 1. Clone the repository
 
 ```bash
 git clone <repo-url>
 cd swapi-server
 ```
 
-### 2. Dependencies installieren
+### 2. Install dependencies
 
 ```bash
 npm install
 ```
 
-### 3. Environment konfigurieren
+### 3. Configure environment
 
 ```bash
 cp .env.example .env
 ```
 
-Dann `.env` mit den Werten befüllen:
+Then fill in your values in `.env`:
 
-| Variable | Beschreibung |
-|----------|--------------|
-| `PORT` | Server Port (default: 5000) |
-| `SHOPWARE_API_URL` | Shopware API Base URL (z.B. `https://shop.de/api`) |
+| Variable | Description |
+|----------|-------------|
+| `PORT` | Server port (default: 5000) |
+| `SHOPWARE_API_URL` | Shopware API base URL (e.g., `https://shop.com/api`) |
 | `SHOPWARE_CLIENT_ID` | Shopware OAuth Client ID |
 | `SHOPWARE_CLIENT_SECRET` | Shopware OAuth Client Secret |
-| `API_KEY` | API Key für Mutations-Endpunkte |
-| `REDIS_URL` | Redis URL (optional, für zukünftiges Caching) |
-| `API_BASE_URL` | Basis-URL der API (informativ) |
+| `API_KEY` | API key for mutation endpoints |
+| `REDIS_URL` | Redis URL (optional, for future caching) |
+| `API_BASE_URL` | Base URL of the API (informational) |
 
-**API Key generieren:**
+**Generate API key:**
 
 ```bash
 openssl rand -hex 32
@@ -62,7 +62,7 @@ openssl rand -hex 32
 
 ### 4. Build & Start
 
-**Development (mit Hot-Reload):**
+**Development (with hot-reload):**
 
 ```bash
 npm run dev
@@ -75,33 +75,33 @@ npm run build
 npm start
 ```
 
-Der Server startet auf dem konfigurierten Port und stellt die API unter `/api` bereit.
+The server starts on the configured port and exposes the API under `/api`.
 
-## API Endpunkte
+## API Endpoints
 
-Alle Endpunkte unter dem Prefix `/api`.
+All endpoints under the `/api` prefix.
 
-### Produkte lesen (ohne Authentifizierung)
+### Read products (no authentication)
 
-| Endpunkt | Methode | Beschreibung |
-|----------|---------|--------------|
-| `/products` | POST | Neueste Produkte mit Pagination und Sortierung |
-| `/search-products` | POST | Produkte nach Name suchen |
-| `/single-product/:id` | GET | Einzelnes Produkt mit Details |
-| `/related-products` | POST | Verwandte Produkte nach Namens-Prefix |
-| `/product-manufacturer` | POST | Alle Hersteller mit Produktanzahl |
-| `/categories-with-products` | POST | Aktive Kategorien mit Produktanzahl |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/products` | POST | Latest products with pagination and sorting |
+| `/search-products` | POST | Search products by name |
+| `/single-product/:id` | GET | Single product with details |
+| `/related-products` | POST | Related products by name prefix |
+| `/product-manufacturer` | POST | All manufacturers with product count |
+| `/categories-with-products` | POST | Active categories with product count |
 
-### Produkte schreiben (API Key erforderlich)
+### Write products (API key required)
 
-| Endpunkt | Methode | Beschreibung |
-|----------|---------|--------------|
-| `/update-main-product` | POST | Einzelnes Produkt aktualisieren |
-| `/update-related-products` | POST | Mehrere Produkte batch-aktualisieren |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/update-main-product` | POST | Update single product |
+| `/update-related-products` | POST | Batch update multiple products |
 
-### Request-Parameter
+### Request Parameters
 
-**`/products` und `/search-products`:**
+**`/products` and `/search-products`:**
 
 ```json
 {
@@ -113,26 +113,26 @@ Alle Endpunkte unter dem Prefix `/api`.
 }
 ```
 
-**Erlaubte Sortierfelder:** `name`, `productNumber`, `releaseDate`, `stock`, `price`
+**Allowed sort fields:** `name`, `productNumber`, `releaseDate`, `stock`, `price`
 
-**Sortierrichtungen:** `ASC`, `DESC`
+**Sort directions:** `ASC`, `DESC`
 
-### Response-Format
+### Response Format
 
-Alle Endpunkte liefern ein einheitliches Format:
+All endpoints return a consistent format:
 
 ```json
 {
   "success": true,
-  "log": "Beschreibung der Aktion",
+  "log": "Description of the action",
   "data": { ... },
   "totalProducts": 123
 }
 ```
 
-## Authentifizierung
+## Authentication
 
-Mutations-Endpunkte erfordern den `X-API-Key` Header:
+Mutation endpoints require the `X-API-Key` header:
 
 ```bash
 curl -X POST http://localhost:5000/api/update-main-product \
@@ -140,21 +140,21 @@ curl -X POST http://localhost:5000/api/update-main-product \
   -H "X-API-Key: your-api-key" \
   -d '{
     "productId": "abc123",
-    "name": "Neuer Produktname",
-    "description": "Beschreibung",
+    "name": "New Product Name",
+    "description": "Description",
     "gender": "Herren"
   }'
 ```
 
-**Unterstützte Gender-Werte:** `Herren`, `Damen`, `Unisex`, `Kids`
+**Supported gender values:** `Herren`, `Damen`, `Unisex`, `Kids`
 
-## Projektstruktur
+## Project Structure
 
 ```
 src/
-├── server.ts              # Express App Entry Point
+├── server.ts              # Express app entry point
 ├── routes/
-│   ├── index.ts           # Route-Aggregator
+│   ├── index.ts           # Route aggregator
 │   ├── latestProducts.ts
 │   ├── searchProducts.ts
 │   ├── singleProduct.ts
@@ -164,8 +164,8 @@ src/
 │   ├── updateMainProduct.ts
 │   └── updateRelatedProducts.ts
 └── utils/
-    ├── getAuthToken.ts    # OAuth Token Management
-    ├── authMiddleware.ts  # API Key Validierung
+    ├── getAuthToken.ts    # OAuth token management
+    ├── authMiddleware.ts  # API key validation
     ├── cacheMiddleware.ts # Cache (Redis-ready)
     ├── mapProductResponse.ts
     ├── errorHandler.ts
@@ -175,16 +175,16 @@ src/
 
 ## Scripts
 
-| Script | Beschreibung |
-|--------|--------------|
-| `npm run dev` | Development mit nodemon |
-| `npm run build` | TypeScript kompilieren |
-| `npm start` | Production Server starten |
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | Development with nodemon |
+| `npm run build` | Compile TypeScript |
+| `npm start` | Start production server |
 
 ## Security
 
-- **Rate Limiting:** 100 Requests pro 15 Minuten pro IP
-- **CSP Headers:** Content-Security-Policy auf `'self'`
-- **API Key:** Pflicht für alle schreibenden Operationen
-- **Input Validation:** Whitelist für Sortierfelder
-- **OAuth 2.0:** Token-Caching mit automatischem Refresh
+- **Rate Limiting:** 100 requests per 15 minutes per IP
+- **CSP Headers:** Content-Security-Policy set to `'self'`
+- **API Key:** Required for all write operations
+- **Input Validation:** Whitelist for sort fields
+- **OAuth 2.0:** Token caching with automatic refresh
